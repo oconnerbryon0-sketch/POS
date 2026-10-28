@@ -35,6 +35,23 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Patch plugins for AGP 8+ compatibility
+        run: |
+          BTP_DIR="$HOME/.pub-cache/hosted/pub.dev/blue_thermal_printer-1.2.3"
+          if [ -f "$BTP_DIR/android/build.gradle" ]; then
+            echo "Patching $BTP_DIR/android/build.gradle"
+            # Add namespace if missing
+            if ! grep -q "namespace" "$BTP_DIR/android/build.gradle"; then
+              sed -i "s/android {/android {\n    namespace 'id.kakzaki.blue_thermal_printer'/" "$BTP_DIR/android/build.gradle"
+            fi
+            # Set compileSdk to 36
+            sed -i "s/compileSdkVersion [0-9]\+/compileSdkVersion 36/g" "$BTP_DIR/android/build.gradle"
+            sed -i "s/compileSdk [0-9]\+/compileSdk 36/g" "$BTP_DIR/android/build.gradle"
+            # Set targetSdk if present
+            sed -i "s/targetSdkVersion [0-9]\+/targetSdkVersion 36/g" "$BTP_DIR/android/build.gradle"
+            cat "$BTP_DIR/android/build.gradle"
+          fi
+
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
 

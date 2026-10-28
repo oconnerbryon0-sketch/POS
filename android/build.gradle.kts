@@ -5,48 +5,46 @@ allprojects {
     }
 }
 
-subprojects { subproject ->
-    subproject.afterEvaluate {
-        val androidExtension = subproject.extensions.findByName("android")
-        if (androidExtension != null) {
+subprojects {
+    afterEvaluate {
+        val androidExt = extensions.findByName("android")
+        if (androidExt != null) {
             try {
-                val getNamespaceMethod = androidExtension.javaClass.getMethod("getNamespace")
-                val namespaceValue = getNamespaceMethod.invoke(androidExtension)
-                if (namespaceValue == null) {
-                    val manifestFile = subproject.file("src/main/AndroidManifest.xml")
-                    if (manifestFile.exists()) {
-                        val manifestText = manifestFile.readText()
-                        val packageRegex = Regex("package=\"([^\"]+)\"")
-                        val match = packageRegex.find(manifestText)
-                        if (match != null) {
-                            val setNamespaceMethod = androidExtension.javaClass.getMethod("setNamespace", String::class.java)
-                            setNamespaceMethod.invoke(androidExtension, match.groupValues[1])
-                            println("[namespace-patch] Set namespace for ${subproject.name}: ${match.groupValues[1]}")
-                        } else {
-                            val fallbackNamespace = "com.example.${subproject.name.replace("-", "_").replace(".", "_")}"
-                            val setNamespaceMethod = androidExtension.javaClass.getMethod("setNamespace", String::class.java)
-                            setNamespaceMethod.invoke(androidExtension, fallbackNamespace)
-                            println("[namespace-patch] Set fallback namespace for ${subproject.name}: $fallbackNamespace")
+                val cls = androidExt.javaClass
+                // Try to set namespace if missing
+                try {
+                    val getNs = cls.getMethod("getNamespace")
+                    val ns = getNs.invoke(androidExt)
+                    if (ns == null) {
+                        val manifest = file("src/main/AndroidManifest.xml")
+                        if (manifest.exists()) {
+                            val txt = manifest.readText()
+                            val m = Regex("package=\"([^\"]+)\"").find(txt)
+                            if (m != null) {
+                                cls.getMethod("setNamespace", String::class.java).invoke(androidExt, m.groupValues[1])
+                                println("[namespace-patch] Set namespace for ${project.name}")
+                            } else {
+                                cls.getMethod("setNamespace", String::class.java).invoke(androidExt, "com.example.${project.name.replace("-", "_")}")
+                                println("[namespace-patch] Set fallback namespace for ${project.name}")
+                            }
                         }
                     }
-                }
-            } catch (e: Exception) {
-                // Ignore for extensions without namespace support
-            }
-
-            try {
-                val getCompileSdkMethod = androidExtension.javaClass.getMethod("getCompileSdk")
-                val compileSdkValue = getCompileSdkMethod.invoke(androidExtension)
-                if (compileSdkValue == null) {
-                    val setCompileSdkMethod = androidExtension.javaClass.getMethod("setCompileSdk", Int::class.javaPrimitiveType)
-                    if (setCompileSdkMethod != null) {
-                        setCompileSdkMethod.invoke(androidExtension, 36)
-                        println("[compile-sdk-patch] Set compileSdk to 36 for ${subproject.name}")
-                    }
-                }
-            } catch (e: Exception) {
-                // Ignore
-            }
+                } catch (_: Exception) {}
+                // Force compileSdk to 36
+                try {
+                    val setCompileSdk = cls.methods.firstOrNull { it.name == "setCompileSdk" && it.parameterTypes.size == 1 && it.parameterTypes[0] == Int::class.javaPrimitiveType }
+                    setCompileSdk?.invoke(androidExt, 36)
+                    println("[compile-sdk-patch] Set compileSdk(36) for ${project.name}")
+                } catch (_: Exception) {}
+                try {
+                    val setCompileSdkVersion = cls.methods.firstOrNull { it.name == "setCompileSdkVersion" && it.parameterTypes.size == 1 }
+                    setCompileSdkVersion?.invoke(androidExt, 36)
+                } catch (_: Exception) {}
+                try {
+                    val compileSdkProp = cls.getMethod("getCompileSdkVersion")
+                    // sometimes it's a property
+                } catch (_: Exception) {}
+            } catch (_: Exception) {}
         }
     }
 }

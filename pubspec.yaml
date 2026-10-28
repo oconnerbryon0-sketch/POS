@@ -1,0 +1,43 @@
+name: pos_app
+description: "Aplikasi POS (Point of Sale) kasir offline-first untuk UMKM."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # Database - SQLite ORM
+  drift: ^2.14.0
+  sqlite3_flutter_libs: ^0.5.0
+  path_provider: ^2.1.2
+  path: ^1.9.0
+
+  # State Management
+  flutter_riverpod: ^2.4.10
+
+  # Hardware Integration
+  blue_thermal_printer: ^1.2.0
+  mobile_scanner: ^3.5.3
+
+  # Export & Reporting
+  pdf: ^3.10.6
+  excel: ^4.0.2
+  share_plus: ^7.2.1
+  open_filex: ^4.3.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  drift_dev: ^2.14.0
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

@@ -6,6 +6,29 @@ allprojects {
 }
 
 subprojects {
+    beforeEvaluate {
+        val androidExt = extensions.findByName("android")
+        if (androidExt != null) {
+            try {
+                val cls = androidExt.javaClass
+                // Force compileSdk to 36
+                try {
+                    val setCompileSdk = cls.methods.firstOrNull { it.name == "setCompileSdk" && it.parameterTypes.isNotEmpty() && it.parameterTypes[0] == Int::class.javaPrimitiveType }
+                    if (setCompileSdk != null) {
+                        setCompileSdk.invoke(androidExt, 36)
+                        println("[compile-sdk-patch-before] Set compileSdk(36) for ${project.name}")
+                    }
+                } catch (_: Exception) {}
+                try {
+                    val setCompileSdkVersion = cls.methods.firstOrNull { it.name == "setCompileSdkVersion" && it.parameterTypes.isNotEmpty() }
+                    if (setCompileSdkVersion != null) {
+                        setCompileSdkVersion.invoke(androidExt, 36)
+                        println("[compile-sdk-patch-before] Set compileSdkVersion(36) for ${project.name}")
+                    }
+                } catch (_: Exception) {}
+            } catch (_: Exception) {}
+        }
+    }
     afterEvaluate {
         val androidExt = extensions.findByName("android")
         if (androidExt != null) {
@@ -30,19 +53,19 @@ subprojects {
                         }
                     }
                 } catch (_: Exception) {}
-                // Force compileSdk to 36
+                // Force compileSdk to 36 again
                 try {
-                    val setCompileSdk = cls.methods.firstOrNull { it.name == "setCompileSdk" && it.parameterTypes.size == 1 && it.parameterTypes[0] == Int::class.javaPrimitiveType }
-                    setCompileSdk?.invoke(androidExt, 36)
-                    println("[compile-sdk-patch] Set compileSdk(36) for ${project.name}")
+                    val setCompileSdk = cls.methods.firstOrNull { it.name == "setCompileSdk" && it.parameterTypes.isNotEmpty() && it.parameterTypes[0] == Int::class.javaPrimitiveType }
+                    if (setCompileSdk != null) {
+                        setCompileSdk.invoke(androidExt, 36)
+                        println("[compile-sdk-patch] Set compileSdk(36) for ${project.name}")
+                    }
                 } catch (_: Exception) {}
                 try {
-                    val setCompileSdkVersion = cls.methods.firstOrNull { it.name == "setCompileSdkVersion" && it.parameterTypes.size == 1 }
-                    setCompileSdkVersion?.invoke(androidExt, 36)
-                } catch (_: Exception) {}
-                try {
-                    val compileSdkProp = cls.getMethod("getCompileSdkVersion")
-                    // sometimes it's a property
+                    val setCompileSdkVersion = cls.methods.firstOrNull { it.name == "setCompileSdkVersion" && it.parameterTypes.isNotEmpty() }
+                    if (setCompileSdkVersion != null) {
+                        setCompileSdkVersion.invoke(androidExt, 36)
+                    }
                 } catch (_: Exception) {}
             } catch (_: Exception) {}
         }

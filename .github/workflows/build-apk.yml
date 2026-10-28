@@ -37,20 +37,45 @@ jobs:
 
       - name: Patch plugins for AGP 8+ compatibility
         run: |
-          BTP_DIR="$HOME/.pub-cache/hosted/pub.dev/blue_thermal_printer-1.2.3"
-          if [ -f "$BTP_DIR/android/build.gradle" ]; then
-            echo "Patching $BTP_DIR/android/build.gradle"
-            # Add namespace if missing
-            if ! grep -q "namespace" "$BTP_DIR/android/build.gradle"; then
-              sed -i "s/android {/android {\n    namespace 'id.kakzaki.blue_thermal_printer'/" "$BTP_DIR/android/build.gradle"
+          for DIR in "$HOME/.pub-cache/hosted/pub.dev"/*/android; do
+            if [ -f "$DIR/build.gradle" ]; then
+              # Add namespace if missing
+              if ! grep -q "namespace" "$DIR/build.gradle"; then
+                PKG=""
+                if [ -f "$DIR/src/main/AndroidManifest.xml" ]; then
+                  PKG=$(grep -oP 'package="\K[^"]+' "$DIR/src/main/AndroidManifest.xml" | head -1)
+                fi
+                if [ -z "$PKG" ]; then
+                  NAME=$(basename $(dirname $DIR))
+                  PKG="com.example.$(echo $NAME | tr '-' '_')"
+                fi
+                sed -i "s/android {/android {\n    namespace '$PKG'/" "$DIR/build.gradle"
+              fi
+              # Set compileSdk to 36
+              sed -i "s/compileSdkVersion [0-9]\+/compileSdkVersion 36/g" "$DIR/build.gradle"
+              sed -i "s/compileSdk [0-9]\+/compileSdk 36/g" "$DIR/build.gradle"
+              sed -i "s/targetSdkVersion [0-9]\+/targetSdkVersion 36/g" "$DIR/build.gradle"
+              echo "Patched $(dirname $DIR)"
             fi
-            # Set compileSdk to 36
-            sed -i "s/compileSdkVersion [0-9]\+/compileSdkVersion 36/g" "$BTP_DIR/android/build.gradle"
-            sed -i "s/compileSdk [0-9]\+/compileSdk 36/g" "$BTP_DIR/android/build.gradle"
-            # Set targetSdk if present
-            sed -i "s/targetSdkVersion [0-9]\+/targetSdkVersion 36/g" "$BTP_DIR/android/build.gradle"
-            cat "$BTP_DIR/android/build.gradle"
-          fi
+            if [ -f "$DIR/build.gradle.kts" ]; then
+              if ! grep -q "namespace" "$DIR/build.gradle.kts"; then
+                PKG=""
+                if [ -f "$DIR/src/main/AndroidManifest.xml" ]; then
+                  PKG=$(grep -oP 'package="\K[^"]+' "$DIR/src/main/AndroidManifest.xml" | head -1)
+                fi
+                if [ -z "$PKG" ]; then
+                  NAME=$(basename $(dirname $DIR))
+                  PKG="com.example.$(echo $NAME | tr '-' '_')"
+                fi
+                sed -i "s/android {/android {\n    namespace = \"$PKG\"/" "$DIR/build.gradle.kts"
+              fi
+              sed -i "s/compileSdk = [0-9]\+/compileSdk = 36/g" "$DIR/build.gradle.kts"
+              sed -i "s/targetSdk = [0-9]\+/targetSdk = 36/g" "$DIR/build.gradle.kts"
+              echo "Patched $(dirname $DIR)"
+            fi
+          done
+          echo "---"
+          grep -n "namespace\|compileSdk" "$HOME/.pub-cache/hosted/pub.dev/mobile_scanner-3.5.7/android/build.gradle" 2>&1 | head -3
 
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
